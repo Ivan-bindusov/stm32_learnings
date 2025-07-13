@@ -43,8 +43,21 @@ void PORTA_0_INIT(void)
   GPIOA->CRL &= ~GPIO_CRL_MODE0_0;
   GPIOA->CRL &= ~GPIO_CRL_MODE0_1;
   
-  GPIOA->CRL &= ~GPIO_CRL_CNF0_0;
-  GPIOA->CRL |= GPIO_CRL_CNF0_1;
+  GPIOA->CRL  &= ~GPIO_CRL_CNF0_0;
+  GPIOA->CRL  |= GPIO_CRL_CNF0_1;
+  
+  GPIOA->BSRR = GPIO_BSRR_BS0;
+}
+
+void Interrupt_EXTI_PA0_init(void)
+{
+  EXTI->PR |= EXTI_PR_PR0;
+  EXTI->IMR |= EXTI_IMR_MR0;
+  AFIO->EXTICR[0] &= ~AFIO_EXTICR1_EXTI0_PA;
+  RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+  EXTI->FTSR |= EXTI_FTSR_TR0;
+  NVIC_EnableIRQ(EXTI0_IRQn);
+  NVIC_SetPriority(EXTI0_IRQn, 0);
 }
 
 void PORTC_13_INIT(void)
@@ -56,30 +69,32 @@ void PORTC_13_INIT(void)
   GPIOC->CRH |= GPIO_CRH_MODE13_1;
 }
 
+void EXTI0_IRQHandler(void)
+{
+  EXTI->PR |= EXTI_PR_PR0;
+  if(Button_state == 1)
+  {
+    for(int i=0; i < 6; i++) {
+      LED_PC13_ON();
+      for(int j=0; j < 500000; j++) {};
+      LED_PC13_OFF();
+      for(int j=0; j < 500000; j++) {};
+    }
+  }
+}
+
 int main(void)
 {
   SetSysClockTo72();
   
   PORTA_0_INIT();
   PORTC_13_INIT();
+  Interrupt_EXTI_PA0_init();
   
   while(1)
   {
     Button_state = READ_BIT(GPIOA->IDR, GPIO_IDR_IDR0);
-    
-    if(Button_state == 1)
-    {
-      LED_PC13_ON();
-    }
-    else
-    {
-      LED_PC13_OFF();
-    }
-    
-//    GPIOC->BSRR |= GPIO_BSRR_BS13;
-//    for(int i=0;i<1000000;i++) {};
-//    GPIOC->BSRR |= GPIO_BSRR_BR13;
-//    for(int i=0;i<1000000;i++) {};
+    LED_PC13_OFF();
   }
   
 }
